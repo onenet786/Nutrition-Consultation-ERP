@@ -1,0 +1,6 @@
+{
+  "name": "Nutrition Consultation & Meal Delivery ERP",
+  "description": "End-to-end nutrition planning, kitchen production, active inventory tracking, logistics, and private self-hosted administration workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

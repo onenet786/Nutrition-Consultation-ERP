@@ -222,6 +222,15 @@ export interface AuditLog {
   details: string;
 }
 
+export interface Assignment {
+  id: string;
+  patientId: string;
+  recipeId: string;
+  assignedBy: string;
+  assignedAt: string;
+}
+
+// Extend DbState to include assignments
 export interface DbState {
   patients: Patient[];
   appointments: Appointment[];
@@ -236,4 +245,6 @@ export interface DbState {
   deliveries: Delivery[];
   expenses: OperatingExpense[];
   auditLogs: AuditLog[];
+  assignments: Assignment[];
 }
+

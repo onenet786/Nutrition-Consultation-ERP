@@ -55,13 +55,13 @@ async function dbSelectOne(sql: string, params: any[] = []) {
 async function dbInsert(tableName: string, record: any) {
   const snakeRecord = mapRowKeys(record, toSnakeCase);
   const keys = Object.keys(snakeRecord);
-  const values = Object.values(snakeRecord).map(val => 
+  const values = Object.values(snakeRecord).map(val =>
     typeof val === 'object' && val !== null ? JSON.stringify(val) : val
   );
-  
+
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
   const columns = keys.map(k => `"${k}"`).join(', ');
-  
+
   const sql = `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING *`;
   const res = await pool.query(sql, values);
   return mapRowKeys(res.rows[0], toCamelCase);
@@ -74,10 +74,10 @@ async function dbUpdate(tableName: string, id: string, record: any) {
   if (keys.length === 0) {
     return dbSelectOne(`SELECT * FROM ${tableName} WHERE id = $1`, [id]);
   }
-  const values = Object.values(snakeRecord).map(val => 
+  const values = Object.values(snakeRecord).map(val =>
     typeof val === 'object' && val !== null ? JSON.stringify(val) : val
   );
-  
+
   const assignments = keys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
   const sql = `UPDATE ${tableName} SET ${assignments} WHERE id = $${keys.length + 1} RETURNING *`;
   const res = await pool.query(sql, [...values, id]);
@@ -490,7 +490,8 @@ function getInitialDbState(): DbState {
     routes: defaultRoutes,
     deliveries: defaultDeliveries,
     expenses: defaultExpenses,
-    auditLogs: defaultAuditLogs
+    auditLogs: defaultAuditLogs,
+    assignments: []
   };
 }
 
@@ -498,12 +499,12 @@ function getInitialDbState(): DbState {
 async function ensureDatabaseExists() {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) return;
-  
+
   const matches = dbUrl.match(/\/([^\/?]+)(?:\?.*)?$/);
   const targetDb = matches ? matches[1] : 'nutrition_erp';
-  
+
   const defaultDbUrl = dbUrl.replace(/\/([^\/?]+)((?:\?.*)?)$/, '/postgres$2');
-  
+
   const client = new pg.Client({ connectionString: defaultDbUrl });
   try {
     await client.connect();
@@ -518,7 +519,7 @@ async function ensureDatabaseExists() {
   } finally {
     try {
       await client.end();
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -739,7 +740,7 @@ async function initializeDatabase() {
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
     if (parseInt(userCount.rows[0].count, 10) === 0) {
       console.log('PostgreSQL database is empty. Seeding initial values...');
-      
+
       const STABLE_USERS = [
         { id: 'usr-admin', name: 'Private Admin', email: 'admin@selfhosted.local', role: 'admin' },
         { id: 'usr-owner', name: 'Business Owner', email: 'owner@selfhosted.local', role: 'owner' },
@@ -868,7 +869,8 @@ async function startServer() {
         routes: await dbSelect('SELECT * FROM routes'),
         deliveries: await dbSelect('SELECT * FROM deliveries'),
         expenses: await dbSelect('SELECT * FROM expenses'),
-        auditLogs: await dbSelect('SELECT * FROM audit_logs')
+        auditLogs: await dbSelect('SELECT * FROM audit_logs'),
+        assignments: await dbSelect('SELECT * FROM assignments'),
       };
       res.setHeader('Content-disposition', `attachment; filename=erp_selfhosted_backup_${new Date().toISOString().split('T')[0]}.json`);
       res.setHeader('Content-Type', 'application/json');
@@ -884,7 +886,7 @@ async function startServer() {
       const incomingState = req.body;
       if (incomingState && Array.isArray(incomingState.patients) && Array.isArray(incomingState.recipes)) {
         await client.query('BEGIN');
-        
+
         const tables = [
           'patients', 'appointments', 'consultations', 'programs', 'recipes',
           'meal_plans', 'kitchen_batches', 'inventory', 'purchase_orders',
@@ -893,9 +895,9 @@ async function startServer() {
         for (const t of tables) {
           await client.query(`TRUNCATE TABLE ${t} CASCADE`);
         }
-        
+
         await client.query('COMMIT');
-        
+
         for (const p of incomingState.patients || []) await dbInsert('patients', p);
         for (const a of incomingState.appointments || []) await dbInsert('appointments', a);
         for (const c of incomingState.consultations || []) await dbInsert('consultations', c);
@@ -909,6 +911,7 @@ async function startServer() {
         for (const d of incomingState.deliveries || []) await dbInsert('deliveries', d);
         for (const ex of incomingState.expenses || []) await dbInsert('expenses', ex);
         for (const log of incomingState.auditLogs || []) await dbInsert('audit_logs', log);
+        for (const assign of incomingState.assignments || []) await dbInsert('assignments', assign);
 
         await logAudit('usr-admin', 'Import Backup', 'Database restore completed successfully through panel upload.');
         res.json({ success: true, message: 'Database state successfully restored and validated.' });
@@ -919,6 +922,16 @@ async function startServer() {
       res.status(500).json({ success: false, message: 'Failed to restore state file: ' + err.message });
     } finally {
       client.release();
+    }
+  });
+
+  // 4. Assignments CRUD (read only for now)
+  app.get('/api/assignments', async (req, res) => {
+    try {
+      const assignments = await dbSelect('SELECT * FROM assignments');
+      res.json(assignments);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
     }
   });
 
@@ -1069,10 +1082,10 @@ async function startServer() {
         ...req.body,
         id: 'mp-' + Date.now()
       };
-      
+
       const todayStr = new Date().toISOString().split('T')[0];
       const todayPlan = mealPlan.days.find((d: any) => d.date === todayStr);
-      
+
       if (todayPlan) {
         const slots = Object.entries(todayPlan.meals);
         for (const [slotType, recipeId] of slots) {

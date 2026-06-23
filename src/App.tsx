@@ -15,7 +15,7 @@ import {
   DollarSign, BookOpen, X
 } from 'lucide-react';
 import {
-  DbState, User, Patient, Appointment, ConsultationNote, Recipe,
+  DbState, User, Patient, Appointment, ConsultationNote, Recipe, Assignment,
   MealPlan, KitchenBatch, InventoryItem, DeliveryRoute, Delivery, OperatingExpense
 } from './types';
 import UserGuideTab from './components/UserGuideTab';
@@ -169,6 +169,8 @@ export default function App() {
 
       const eRes = await fetch('/api/expenses');
       const exps: OperatingExpense[] = await eRes.json();
+      const asgRes = await fetch('/api/assignments');
+      const assigns: Assignment[] = await asgRes.json();
 
       const lRes = await fetch('/api/audit-logs');
       const logs = await lRes.json();
@@ -186,6 +188,7 @@ export default function App() {
         routes: rts,
         deliveries: dels,
         expenses: exps,
+        assignments: assigns,
         auditLogs: logs
       });
 
@@ -928,7 +931,36 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Patient simulated portal (If user is patient) */}
+              {/* Assignments Table */}
+<div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+  <h3 className="text-base font-bold text-slate-900 font-display">Medication / Recipe Assignments</h3>
+  <div className="overflow-auto">
+    <table className="w-full text-left text-sm">
+      <thead className="bg-slate-100">
+        <tr>
+          <th className="p-2">Patient</th>
+          <th className="p-2">Recipe</th>
+          <th className="p-2">Assigned By</th>
+          <th className="p-2">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {db?.assignments.map(a => {
+          const patient = db?.patients.find(p => p.id === a.patientId);
+          const recipe = db?.recipes.find(r => r.id === a.recipeId);
+          return (
+            <tr key={a.id} className="border-t">
+              <td className="p-2">{patient ? `${patient.firstName} ${patient.lastName}` : a.patientId}</td>
+              <td className="p-2">{recipe ? recipe.name : a.recipeId}</td>
+              <td className="p-2">{a.assignedBy}</td>
+              <td className="p-2">{new Date(a.assignedAt).toLocaleDateString()}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
               {currentUser.role === 'patient' && (
                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
                   <div className="flex justify-between items-center pb-4 border-b border-gray-100">

@@ -4,18 +4,35 @@
  */
 
 import React, { useState, useEffect } from 'react';
+
+// Base URL for backend API
+// API_BASE removed – using relative URLs
 import {
   Users, Calendar, Clipboard, FolderHeart, ShieldCheck, Soup, ChefHat,
   Truck, Wallet, Settings, TrendingDown, TrendingUp, AlertCircle, Plus,
   Sparkles, CheckCircle, Clock, CheckSquare, Search, RotateCw, MapPin, 
   HelpCircle, LogOut, ChevronRight, UserCheck, HardDrive, KeyRound, Lock, Info,
-  DollarSign
+  DollarSign, BookOpen, X
 } from 'lucide-react';
 import {
   DbState, User, Patient, Appointment, ConsultationNote, Recipe,
   MealPlan, KitchenBatch, InventoryItem, DeliveryRoute, Delivery, OperatingExpense
 } from './types';
-import SelfHostedServerTab from './components/SelfHostedServerTab';
+import UserGuideTab from './components/UserGuideTab';
+
+// Auto-formatting helper functions
+const formatCNIC = (value: string) => {
+  const clean = value.replace(/\D/g, ''); // strip non-digits
+  if (clean.length <= 5) return clean;
+  if (clean.length <= 12) return `${clean.slice(0, 5)}-${clean.slice(5)}`;
+  return `${clean.slice(0, 5)}-${clean.slice(5, 12)}-${clean.slice(12, 13)}`;
+};
+
+const formatLocalPhone = (value: string) => {
+  const clean = value.replace(/\D/g, ''); // strip non-digits
+  if (clean.length <= 3) return clean;
+  return `${clean.slice(0, 3)}-${clean.slice(3, 10)}`;
+};
 
 export default function App() {
   // DB Live State
@@ -24,6 +41,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
   const [errorHeader, setErrorHeader] = useState<string>('');
+  const [showOnboardModal, setShowOnboardModal] = useState<boolean>(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState<boolean>(false);
+  const [showAddRecipeModal, setShowAddRecipeModal] = useState<boolean>(false);
 
   // Authentication Fields
   const [loginEmail, setLoginEmail] = useState<string>('owner@selfhosted.local');
@@ -87,6 +107,30 @@ export default function App() {
     dateTime: '',
     notes: ''
   });
+
+  // Create Recipe States
+  const [newRecipe, setNewRecipe] = useState({
+    name: '',
+    category: 'Lunch/Dinner',
+    prepTime: 10,
+    cookTime: 15,
+    servingSize: 1,
+    calories: 350,
+    protein: 25,
+    carbs: 30,
+    fat: 12,
+    fiber: 3,
+    sodium: 180,
+    isReadyMade: false,
+    readyMadeId: '',
+    assignedPatientId: '',
+    ingredientsText: 'Salmon Fillet: 200g\nLemon Juice: 15ml\nOlive Oil: 10ml',
+    instructionsText: 'Preheat grill to medium-high.\nGrill salmon for 6 mins each side.\nServe warm.'
+  });
+  // State for ready‑made recipe list
+  const [readyMadeRecipes, setReadyMadeRecipes] = useState<Recipe[]>([]);
+  // State for patient list when assigning ready‑made recipes
+  const [patients, setPatients] = useState<Patient[]>([]);
 
   // Create Meal Plan Inputs
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
@@ -194,6 +238,8 @@ export default function App() {
       const calculatedBmi = Number((newPatient.weight / ((newPatient.height / 100) ** 2)).toFixed(1));
       const payload = {
         ...newPatient,
+        mobile: `+92-${newPatient.mobile}`,
+        emergencyContact: `+92-${newPatient.emergencyContact}`,
         bmi: calculatedBmi,
         allergies: newPatient.allergies.split(',').map(s => s.trim()).filter(Boolean),
         medicalConditions: newPatient.medicalConditions.split(',').map(s => s.trim()).filter(Boolean),
@@ -235,6 +281,7 @@ export default function App() {
             foodRestrictions: 'None'
           }
         });
+        setShowOnboardModal(false);
       }
     } catch (err) {
       setErrorHeader('Could not record patient entries to private database server.');
@@ -401,11 +448,81 @@ export default function App() {
       if (res.ok) {
         await fetchData();
         setNewAppointment({ patientId: '', type: 'Initial Consultation', dateTime: '', notes: '' });
+        setShowAppointmentModal(false);
       }
     } catch (err) {
       setErrorHeader('Could not book appointment schedule.');
     }
   };
+
+  const handleCreateRecipe = async () => {
+    if (newRecipe.isReadyMade) {
+      // Assign existing ready‑made recipe to patient
+      await handleAssignReadyMade();
+      return;
+    }
+    // Regular recipe creation
+    try {
+      const response = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRecipe),
+      });
+      if (response.ok) {
+        // Refresh list and close modal
+        fetchData();
+        setShowAddRecipeModal(false);
+      } else {
+        console.error('Failed to create recipe');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAssignReadyMade = async () => {
+    if (!newRecipe.readyMadeId || !newRecipe.assignedPatientId) {
+      alert('Please select a recipe and patient');
+      return;
+    }
+    try {
+      const payload = {
+        readyMadeId: newRecipe.readyMadeId,
+        patientId: newRecipe.assignedPatientId,
+      };
+      const response = await fetch('/api/assignReadyMade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        alert('Recipe assigned to patient');
+        setShowAddRecipeModal(false);
+      } else {
+        console.error('Assign failed');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // -------------------------------------------------
+  // 6. Fetch ready‑made recipes & patient list when needed
+  // -------------------------------------------------
+  useEffect(() => {
+    if (showAddRecipeModal && newRecipe.isReadyMade) {
+      // fetch ready‑made list
+      fetch('/api/readyMadeRecipes')
+        .then(res => res.json())
+        .then(setReadyMadeRecipes)
+        .catch(console.error);
+      // fetch patients list (needed for assignment)
+      fetch('/api/patients')
+        .then(res => res.json())
+        .then(setPatients)
+        .catch(console.error);
+    }
+  }, [showAddRecipeModal, newRecipe.isReadyMade]);
 
   const handleDeployMealPlan = async () => {
     if (!selectedPatientId || !selectedRecipeId) return;
@@ -566,7 +683,24 @@ export default function App() {
                   Self-Hosted Container
                 </span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-mono hidden md:block">Connected to local Stateful Database store (db.json)</p>
+              <p className="text-[10px] font-mono hidden md:block flex items-center gap-1.5 mt-0.5">
+                {errorHeader ? (
+                  <span className="text-red-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                    PostgreSQL Connection Failed
+                  </span>
+                ) : loading ? (
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse"></span>
+                    Connecting to Database...
+                  </span>
+                ) : (
+                  <span className="text-green-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                    Connected to PostgreSQL Database
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
@@ -704,8 +838,8 @@ export default function App() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <HardDrive className="h-4 w-4 mr-0.5 text-green-600" />
-                <span className="font-semibold text-slate-800">Private Host Center</span>
+                <BookOpen className="h-4 w-4 mr-0.5 text-green-600" />
+                <span className="font-semibold text-slate-800">User & Tutorial Guide</span>
               </div>
               <ChevronRight className="h-4 w-4 opacity-50" />
             </button>
@@ -729,7 +863,32 @@ export default function App() {
           {/* 1. DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              
+              {/* Dashboard Header with Quick Actions */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 font-display">Operational Desk</h2>
+                  <p className="text-xs text-gray-400">Real-time status updates and primary quick actions</p>
+                </div>
+                {(currentUser.role !== 'patient' && currentUser.role !== 'rider') && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setShowOnboardModal(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow transition duration-150"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Onboard New Patient</span>
+                    </button>
+                    <button
+                      onClick={() => setShowAppointmentModal(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer shadow transition duration-150"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      <span>Book Appointment</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Header block with statistics indicator cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
@@ -860,7 +1019,7 @@ export default function App() {
                     Doctor consultation Appointment Desk
                   </h3>
 
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                  <div className="space-y-3 max-h-[460px] overflow-y-auto">
                     {db?.appointments.map((apt) => (
                       <div key={apt.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
                         <div className="flex justify-between items-start">
@@ -881,47 +1040,6 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-
-                  <form onSubmit={handleCreateAppointment} className="p-3 bg-gray-50 rounded-xl space-y-3">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Schedule consultation slot</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
-                        value={newAppointment.patientId}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, patientId: e.target.value })}
-                        required
-                        className="p-2 border border-gray-200 bg-white rounded-lg text-xs"
-                      >
-                        <option value="">Choose Patient</option>
-                        {db?.patients.map(p => (
-                          <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={newAppointment.type}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, type: e.target.value as any })}
-                        className="p-2 border border-gray-200 bg-white rounded-lg text-xs"
-                      >
-                        <option value="Initial Consultation">Initial Consultation</option>
-                        <option value="Follow-Up">Follow-Up Review</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      <input
-                        type="datetime-local"
-                        required
-                        value={newAppointment.dateTime}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, dateTime: e.target.value })}
-                        className="p-2 border border-gray-200 bg-white rounded-lg text-xs"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      id="btn-book-consult-slot"
-                      className="w-full py-2 bg-slate-900 border border-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
-                    >
-                      Book Active Appointment
-                    </button>
-                  </form>
                 </div>
 
                 {/* Right side: system status & security checklists */}
@@ -963,11 +1081,29 @@ export default function App() {
             <div className="space-y-6">
               
               <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <h2 className="text-base font-bold text-slate-900 font-display">Patient Records Directory</h2>
                     <p className="text-xs text-gray-400">Record physical assessment measures, view timelines and consult Gemini AI</p>
                   </div>
+                  {(currentUser.role !== 'patient' && currentUser.role !== 'rider') && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setShowOnboardModal(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow transition duration-150"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Onboard New Patient</span>
+                      </button>
+                      <button
+                        onClick={() => setShowAppointmentModal(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer shadow transition duration-150"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        <span>Book Appointment</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Patient selection list */}
@@ -1070,7 +1206,7 @@ export default function App() {
                           )}
 
                           <form onSubmit={handleAddConsultation} className="bg-slate-50 p-4 rounded-xl space-y-3">
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-3 items-end">
                               <div>
                                 <label className="text-[10px] font-semibold text-slate-500 block mb-1">Weight (kg)</label>
                                 <input
@@ -1082,23 +1218,28 @@ export default function App() {
                                   className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
                                 />
                               </div>
-                              <div>
-                                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Sys Pressure</label>
-                                <input
-                                  type="number"
-                                  value={newConsultation.systolic}
-                                  onChange={(e) => setNewConsultation({...newConsultation, systolic: parseInt(e.target.value) || 120})}
-                                  className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Dia Pressure</label>
-                                <input
-                                  type="number"
-                                  value={newConsultation.diastolic}
-                                  onChange={(e) => setNewConsultation({...newConsultation, diastolic: parseInt(e.target.value) || 80})}
-                                  className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                                />
+                              <div className="col-span-2">
+                                <span className="text-[10px] font-bold text-slate-500 block mb-1 text-center border-b border-gray-200 pb-0.5">Blood Pressure (mmHg)</span>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <label className="text-[9px] font-semibold text-slate-400 block mb-0.5 text-center">Sys Pressure</label>
+                                    <input
+                                      type="number"
+                                      value={newConsultation.systolic}
+                                      onChange={(e) => setNewConsultation({...newConsultation, systolic: parseInt(e.target.value) || 120})}
+                                      className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-semibold text-slate-400 block mb-0.5 text-center">Dia Pressure</label>
+                                    <input
+                                      type="number"
+                                      value={newConsultation.diastolic}
+                                      onChange={(e) => setNewConsultation({...newConsultation, diastolic: parseInt(e.target.value) || 80})}
+                                      className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
@@ -1166,143 +1307,7 @@ export default function App() {
                   );
                 })()}
 
-                {/* Patient Creator form */}
-                <div className="pt-6 border-t border-gray-100">
-                  <h3 className="text-sm font-bold text-slate-900 font-display mb-4">Onboard A New Patient</h3>
-                  
-                  <form onSubmit={handleCreatePatient} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">First Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={newPatient.firstName}
-                        onChange={(e) => setNewPatient({...newPatient, firstName: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="Zainab"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Last Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={newPatient.lastName}
-                        onChange={(e) => setNewPatient({...newPatient, lastName: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="Malik"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Mobile Contact</label>
-                      <input
-                        type="tel"
-                        required
-                        value={newPatient.mobile}
-                        onChange={(e) => setNewPatient({...newPatient, mobile: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="+92 301 5556677"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">CNIC Certificate Key</label>
-                      <input
-                        type="text"
-                        required
-                        value={newPatient.cnic}
-                        onChange={(e) => setNewPatient({...newPatient, cnic: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="35201-1111111-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Email Address</label>
-                      <input
-                        type="email"
-                        required
-                        value={newPatient.email}
-                        onChange={(e) => setNewPatient({...newPatient, email: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="zainab.malik@gmail.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Emergency Contact Info</label>
-                      <input
-                        type="text"
-                        required
-                        value={newPatient.emergencyContact}
-                        onChange={(e) => setNewPatient({...newPatient, emergencyContact: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="Father (Contact: +92 321 0001112)"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Height (cm)</label>
-                      <input
-                        type="number"
-                        required
-                        value={newPatient.height}
-                        onChange={(e) => setNewPatient({...newPatient, height: parseInt(e.target.value) || 0})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Weight (kg)</label>
-                      <input
-                        type="number"
-                        required
-                        value={newPatient.weight}
-                        onChange={(e) => setNewPatient({...newPatient, weight: parseFloat(e.target.value) || 0})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Address Location</label>
-                      <input
-                        type="text"
-                        required
-                        value={newPatient.address}
-                        onChange={(e) => setNewPatient({...newPatient, address: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs hover:border-green-400"
-                        placeholder="House 15, Sector Z, Phase 6 DHA"
-                      />
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <label className="text-xs text-slate-500 block mb-1">Known Allergies (comma separated lists)</label>
-                      <input
-                        type="text"
-                        value={newPatient.allergies}
-                        onChange={(e) => setNewPatient({...newPatient, allergies: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="Milk Protein, Soy dust, Pine nuts"
-                      />
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <label className="text-xs text-slate-500 block mb-1">Diagnosed health conditions</label>
-                      <input
-                        type="text"
-                        value={newPatient.medicalConditions}
-                        onChange={(e) => setNewPatient({...newPatient, medicalConditions: e.target.value})}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
-                        placeholder="Diabetes, Hypothyroidism, Hypertension"
-                      />
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <button
-                        type="submit"
-                        id="btn-register-new-patient"
-                        className="px-6 py-2.5 bg-green-600 hover:bg-green-700 font-bold text-white rounded-xl text-xs transition cursor-pointer"
-                      >
-                        Register Medical Patient Profile
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
+                {/* Patient Onboarding is handled via modal dialog from top action buttons */}
               </div>
 
             </div>
@@ -1313,9 +1318,20 @@ export default function App() {
             <div className="space-y-6">
               
               <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-6">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 font-display">Recipe Masters & Diet planner</h2>
-                  <p className="text-xs text-gray-400">Compose patient meal schedules and assign them directly to the kitchen production line.</p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 font-display">Recipe Masters & Diet planner</h2>
+                    <p className="text-xs text-gray-400">Compose patient meal schedules and assign them directly to the kitchen production line.</p>
+                  </div>
+                  {(currentUser.role !== 'patient' && currentUser.role !== 'rider') && (
+                    <button
+                      onClick={() => setShowAddRecipeModal(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow transition duration-150"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add New Recipe</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1748,13 +1764,9 @@ export default function App() {
             </div>
           )}
 
-          {/* 8. SELF-HOSTED DB BACKUP TAB */}
-          {activeTab === 'self-hosted' && db && (
-            <SelfHostedServerTab
-              auditLogs={db.auditLogs}
-              onRefresh={fetchData}
-              currentUser={currentUser}
-            />
+          {/* 8. USER & TUTORIAL GUIDE TAB */}
+          {activeTab === 'self-hosted' && (
+            <UserGuideTab />
           )}
 
         </main>
@@ -1774,6 +1786,635 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Onboard Patient Modal Dialog */}
+      {showOnboardModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-7xl p-4 md:p-5 relative max-h-[98vh] overflow-y-auto flex flex-col animate-fade-in">
+            <button
+              onClick={() => setShowOnboardModal(false)}
+              className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-base font-bold text-slate-900 font-display">Onboard A New Patient</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Register new physical parameters, lifestyle preferences, and comorbidities in a single screen</p>
+            </div>
+
+            <form onSubmit={handleCreatePatient} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2.5">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">First Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newPatient.firstName}
+                  onChange={(e) => setNewPatient({...newPatient, firstName: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="Zainab"
+                />
+              </div>
+              
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Last Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newPatient.lastName}
+                  onChange={(e) => setNewPatient({...newPatient, lastName: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="Malik"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Gender</label>
+                <select
+                  value={newPatient.gender}
+                  onChange={(e) => setNewPatient({...newPatient, gender: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                >
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Date of Birth</label>
+                <input
+                  type="date"
+                  required
+                  value={newPatient.dob}
+                  onChange={(e) => setNewPatient({...newPatient, dob: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Mobile Contact</label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 flex items-center gap-1 pointer-events-none select-none text-slate-500 font-semibold font-mono text-xs">
+                    <span>🇵🇰</span>
+                    <span>+92</span>
+                    <span className="h-4 w-[1px] bg-slate-300 ml-1.5"></span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    pattern="^\d{3}-\d{7}$"
+                    title="Format must be xxx-xxxxxxx (e.g., 300-1234567)"
+                    value={newPatient.mobile}
+                    onChange={(e) => setNewPatient({...newPatient, mobile: formatLocalPhone(e.target.value)})}
+                    className="w-full pl-16 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                    placeholder="300-1234567"
+                    maxLength={11}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">CNIC Number</label>
+                <input
+                  type="text"
+                  required
+                  pattern="^\d{5}-\d{7}-\d{1}$"
+                  title="Format must be xxxxx-xxxxxxx-x (e.g., 35201-1234567-8)"
+                  value={newPatient.cnic}
+                  onChange={(e) => setNewPatient({...newPatient, cnic: formatCNIC(e.target.value)})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="35201-1234567-8"
+                  maxLength={15}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newPatient.email}
+                  onChange={(e) => setNewPatient({...newPatient, email: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="zainab.malik@gmail.com"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Emergency Contact Info</label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 flex items-center gap-1 pointer-events-none select-none text-slate-500 font-semibold font-mono text-xs">
+                    <span>🇵🇰</span>
+                    <span>+92</span>
+                    <span className="h-4 w-[1px] bg-slate-300 ml-1.5"></span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    pattern="^\d{3}-\d{7}$"
+                    title="Format must be xxx-xxxxxxx (e.g., 321-1234567)"
+                    value={newPatient.emergencyContact}
+                    onChange={(e) => setNewPatient({...newPatient, emergencyContact: formatLocalPhone(e.target.value)})}
+                    className="w-full pl-16 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                    placeholder="321-1234567"
+                    maxLength={11}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Blood Group</label>
+                <select
+                  value={newPatient.bloodGroup}
+                  onChange={(e) => setNewPatient({...newPatient, bloodGroup: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                >
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Height (cm)</label>
+                <input
+                  type="number"
+                  required
+                  value={newPatient.height}
+                  onChange={(e) => setNewPatient({...newPatient, height: parseInt(e.target.value) || 0})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Weight (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  required
+                  value={newPatient.weight}
+                  onChange={(e) => setNewPatient({...newPatient, weight: parseFloat(e.target.value) || 0})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Address Location</label>
+                <input
+                  type="text"
+                  required
+                  value={newPatient.address}
+                  onChange={(e) => setNewPatient({...newPatient, address: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="House 15, Sector Z, Phase 6 DHA"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Known Allergies (comma separated)</label>
+                <input
+                  type="text"
+                  value={newPatient.allergies}
+                  onChange={(e) => setNewPatient({...newPatient, allergies: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="Milk Protein, Soy dust, Pine nuts"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Diagnosed Health Conditions</label>
+                <input
+                  type="text"
+                  value={newPatient.medicalConditions}
+                  onChange={(e) => setNewPatient({...newPatient, medicalConditions: e.target.value})}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="Diabetes, Hypothyroidism, Hypertension"
+                />
+              </div>
+
+              {/* Patient Lifestyle Habits integrated directly in the same 4-column layout */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Water (L/day)</label>
+                <input
+                  type="number"
+                  value={newPatient.lifestyle.waterIntake}
+                  onChange={(e) => setNewPatient({
+                    ...newPatient,
+                    lifestyle: { ...newPatient.lifestyle, waterIntake: parseFloat(e.target.value) || 2 }
+                  })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Sleep (Hours/day)</label>
+                <input
+                  type="number"
+                  value={newPatient.lifestyle.sleepHours}
+                  onChange={(e) => setNewPatient({
+                    ...newPatient,
+                    lifestyle: { ...newPatient.lifestyle, sleepHours: parseInt(e.target.value) || 7 }
+                  })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Activity Level</label>
+                <select
+                  value={newPatient.lifestyle.activityLevel}
+                  onChange={(e) => setNewPatient({
+                    ...newPatient,
+                    lifestyle: { ...newPatient.lifestyle, activityLevel: e.target.value }
+                  })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                >
+                  <option value="Sedentary">Sedentary</option>
+                  <option value="Light">Light</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Active">Active</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Diet preferences</label>
+                <input
+                  type="text"
+                  value={newPatient.lifestyle.foodPreferences}
+                  onChange={(e) => setNewPatient({
+                    ...newPatient,
+                    lifestyle: { ...newPatient.lifestyle, foodPreferences: e.target.value }
+                  })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  placeholder="Low carb, sugar-free"
+                />
+              </div>
+
+              <div className="sm:col-span-2 md:col-span-4 flex justify-end gap-3 pt-3 border-t border-slate-100 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardModal(false)}
+                  className="px-5 py-2 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="btn-modal-register-patient"
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition"
+                >
+                  Register Patient Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Book Appointment Modal Dialog */}
+      {showAppointmentModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-lg p-5 md:p-6 relative max-h-[95vh] overflow-y-auto flex flex-col animate-fade-in">
+            <button
+              onClick={() => setShowAppointmentModal(false)}
+              className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-base font-bold text-slate-900 font-display flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-green-600" />
+                Book Active Appointment
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Schedule a new initial or follow-up doctor consultation session</p>
+            </div>
+
+            <form onSubmit={handleCreateAppointment} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Target Patient</label>
+                <select
+                  value={newAppointment.patientId}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, patientId: e.target.value })}
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                >
+                  <option value="">Choose Patient</option>
+                  {db?.patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Appointment Type</label>
+                <select
+                  value={newAppointment.type}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, type: e.target.value as any })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                >
+                  <option value="Initial Consultation">Initial Consultation</option>
+                  <option value="Follow-Up">Follow-Up Review</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Date & Time Slot</label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={newAppointment.dateTime}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, dateTime: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Consultation Notes (Optional)</label>
+                <textarea
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, notes: e.target.value })}
+                  rows={3}
+                  placeholder="E.g., Patient requested morning slot, wants review of blood work."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAppointmentModal(false)}
+                  className="px-5 py-2 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="btn-modal-book-consult-slot"
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition"
+                >
+                  Book Appointment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Recipe Modal Dialog */}
+      {showAddRecipeModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-4xl p-5 md:p-6 relative max-h-[95vh] overflow-y-auto flex flex-col animate-fade-in">
+            <button
+              onClick={() => setShowAddRecipeModal(false)}
+              className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-base font-bold text-slate-900 font-display flex items-center gap-2">
+                <Soup className="h-5 w-5 text-green-600" />
+                Add New Recipe Master
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Register a new meal recipe, raw ingredient dependencies, and nutritional profiles</p>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateRecipe(); }} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-3">
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Recipe Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newRecipe.name}
+                    onChange={(e) => setNewRecipe({...newRecipe, name: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                    placeholder="E.g., Honey Garlic Grilled Salmon"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Category</label>
+                  <select
+                    value={newRecipe.category}
+                    onChange={(e) => setNewRecipe({...newRecipe, category: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  >
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Lunch/Dinner">Lunch/Dinner</option>
+                    <option value="Snack">Snack</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Prep Time (min)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.prepTime}
+                    onChange={(e) => setNewRecipe({...newRecipe, prepTime: parseInt(e.target.value) || 0})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Cook Time (min)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.cookTime}
+                    onChange={(e) => setNewRecipe({...newRecipe, cookTime: parseInt(e.target.value) || 0})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Serving Size</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.servingSize}
+                    onChange={(e) => setNewRecipe({...newRecipe, servingSize: parseInt(e.target.value) || 1})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Calories (Kcal)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.calories}
+                    onChange={(e) => setNewRecipe({...newRecipe, calories: parseInt(e.target.value) || 0})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Protein (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.protein}
+                    onChange={(e) => setNewRecipe({...newRecipe, protein: parseInt(e.target.value) || 0})}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Carbs (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.carbs}
+                    onChange={(e) => setNewRecipe({...newRecipe, carbs: parseInt(e.target.value) || 0})}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Fat (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.fat}
+                    onChange={(e) => setNewRecipe({...newRecipe, fat: parseInt(e.target.value) || 0})}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Fiber (g)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.fiber}
+                    onChange={(e) => setNewRecipe({...newRecipe, fiber: parseInt(e.target.value) || 0})}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Sodium (mg)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRecipe.sodium}
+                    onChange={(e) => setNewRecipe({...newRecipe, sodium: parseInt(e.target.value) || 0})}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Ingredients list (Format: "Name: Quantity Unit", one per line)</label>
+                  <textarea
+                    required
+                    value={newRecipe.ingredientsText}
+                    onChange={(e) => setNewRecipe({...newRecipe, ingredientsText: e.target.value})}
+                    rows={4}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition font-mono leading-relaxed"
+                    placeholder="Salmon Fillet: 200g&#10;Lemon Juice: 15ml&#10;Olive Oil: 10ml"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Preparation Steps / Instructions (One step per line)</label>
+                  <textarea
+                    required
+                    value={newRecipe.instructionsText}
+                    onChange={(e) => setNewRecipe({...newRecipe, instructionsText: e.target.value})}
+                    rows={4}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white transition leading-relaxed"
+                    placeholder="Preheat grill to medium-high heat.&#10;Season salmon and grill for 6 minutes each side.&#10;Plate and serve warm."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <label className="inline-flex items-center">
+                  <input type="checkbox"
+                    checked={newRecipe.isReadyMade}
+                    onChange={(e) => setNewRecipe({ ...newRecipe, isReadyMade: e.target.checked })}
+                    className="form-checkbox h-4 w-4 text-green-600"
+                  />
+                  <span className="ml-2 text-xs font-semibold text-slate-600">Ready‑Made (catalog item)</span>
+                </label>
+              </div>
+              {newRecipe.isReadyMade && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">Select Ready‑Made Recipe</label>
+                    <select
+                      value={newRecipe.readyMadeId}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, readyMadeId: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
+                    >
+                      <option value="">-- Choose --</option>
+                      {readyMadeRecipes.map((r: any) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">Assign to Patient</label>
+                    <select
+                      value={newRecipe.assignedPatientId}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, assignedPatientId: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    >
+                      <option value="">-- Choose Patient --</option>
+                      {patients.map((p: any) => (
+                        <option key={p.id} value={p.id} style={{ color: 'inherit' }}>
+                          {p.firstName} {p.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleAssignReadyMade}
+                      className="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Assign
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewRecipe({ ...newRecipe, isReadyMade: false })}
+                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
+                    >
+                      Add New Recipe
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddRecipeModal(false)}
+                  className="px-5 py-2 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="btn-modal-create-recipe"
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition"
+                >
+                  Create Recipe Master
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

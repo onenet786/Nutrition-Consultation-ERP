@@ -100,6 +100,7 @@ export interface Recipe {
     sodium?: number;
   };
   instructions: string[];
+  isReadyMade?: boolean; // true for catalog/ready‑made items
 }
 
 export interface MealPlanDay {

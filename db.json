@@ -1,0 +1,785 @@
+{
+  "patients": [
+    {
+      "id": "pt-1",
+      "firstName": "Ayesha",
+      "lastName": "Khan",
+      "gender": "Female",
+      "dob": "1992-04-12",
+      "cnic": "35201-1234567-8",
+      "mobile": "+92 300 1234567",
+      "email": "ayesha.khan@gmail.com",
+      "address": "House 42, Sector Y, DHA Phase 3",
+      "city": "Lahore",
+      "emergencyContact": "Tariq Khan (+92 321 9876543)",
+      "height": 165,
+      "weight": 84.5,
+      "bmi": 31,
+      "bloodGroup": "B+",
+      "allergies": [
+        "Gluten",
+        "Peanuts"
+      ],
+      "medicalConditions": [
+        "Hypothyroidism",
+        "PCOS",
+        "Obesity Management"
+      ],
+      "lifestyle": {
+        "activityLevel": "Sedentary",
+        "sleepHours": 6,
+        "waterIntake": 1.5,
+        "foodPreferences": "No red meat, prefers organic",
+        "foodRestrictions": "Strictly gluten-free"
+      },
+      "status": "active",
+      "joinedDate": "2026-05-15"
+    },
+    {
+      "id": "pt-2",
+      "firstName": "Zain",
+      "lastName": "Ahmed",
+      "gender": "Male",
+      "dob": "1985-08-23",
+      "cnic": "42201-8765432-1",
+      "mobile": "+92 333 4567890",
+      "email": "zain.ahmed@gmail.com",
+      "address": "Apartment 4B, Creek Vista, Phase 8, Clifton",
+      "city": "Karachi",
+      "emergencyContact": "Fatima Ahmed (+92 300 1122334)",
+      "height": 178,
+      "weight": 96.2,
+      "bmi": 30.4,
+      "bloodGroup": "O+",
+      "allergies": [
+        "Shellfish"
+      ],
+      "medicalConditions": [
+        "Type 2 Diabetes",
+        "Hypertension"
+      ],
+      "lifestyle": {
+        "activityLevel": "Moderate (Active twice a week)",
+        "sleepHours": 7,
+        "waterIntake": 2.2,
+        "foodPreferences": "High protein, low carb",
+        "foodRestrictions": "Sugar-free"
+      },
+      "status": "active",
+      "joinedDate": "2026-06-01"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "ap-1",
+      "patientId": "pt-1",
+      "patientName": "Ayesha Khan",
+      "type": "Initial Consultation",
+      "status": "completed",
+      "dateTime": "2026-05-15T10:00:00",
+      "videoLink": "https://meet.google.com/abc-defg-hij",
+      "notes": "Initial checkup completed. Confirmed Obesity and PCOS concerns. Suggested Weight Loss Meal Plan."
+    },
+    {
+      "id": "ap-2",
+      "patientId": "pt-2",
+      "patientName": "Zain Ahmed",
+      "type": "Initial Consultation",
+      "status": "completed",
+      "dateTime": "2026-06-01T11:30:00",
+      "videoLink": "https://meet.google.com/xyz-qprs-tuv",
+      "notes": "Type 2 diabetic patient requiring controlled GI carb diet. Set up 4-week program."
+    },
+    {
+      "id": "ap-3",
+      "patientId": "pt-1",
+      "patientName": "Ayesha Khan",
+      "type": "Follow-Up",
+      "status": "scheduled",
+      "dateTime": "2026-06-20T14:30:00",
+      "videoLink": "https://meet.google.com/abc-defg-hij",
+      "notes": "Review weight reduction and update calorie thresholds."
+    }
+  ],
+  "consultations": [
+    {
+      "id": "cn-1",
+      "patientId": "pt-1",
+      "date": "2026-05-15",
+      "weight": 84.5,
+      "bmi": 31,
+      "systolic": 130,
+      "diastolic": 85,
+      "notes": "Patient struggles with high-GI carbs due to PCOS insulin resistance. Prescribed low carbohydrate and allergen-free custom diet.",
+      "recommendations": "Goal is 1500 kcal high protein. Zero gluten, zero peanut exposures. Water intake to exceed 2.5L daily.",
+      "assignedProgram": "Weight Loss"
+    },
+    {
+      "id": "cn-2",
+      "patientId": "pt-2",
+      "date": "2026-06-01",
+      "weight": 96.2,
+      "bmi": 30.4,
+      "systolic": 140,
+      "diastolic": 90,
+      "notes": "Diabetic patient needs strict portion size containment. Carbs focused solely on whole grains (Quinoa, oats).",
+      "recommendations": "Restrict daily simple sugar to absolute zero. Emphasize organic chicken and steamed greens.",
+      "assignedProgram": "Diabetic"
+    }
+  ],
+  "programs": [
+    {
+      "id": "prg-1",
+      "patientId": "pt-1",
+      "name": "Weight Loss Custom Program",
+      "type": "Weight Loss",
+      "startDate": "2026-05-16",
+      "endDate": "2026-08-16",
+      "durationWeeks": 12,
+      "status": "active",
+      "nutritionistId": "nut-1"
+    },
+    {
+      "id": "prg-2",
+      "patientId": "pt-2",
+      "name": "Type 2 Diabetes Control",
+      "type": "Diabetic",
+      "startDate": "2026-06-02",
+      "endDate": "2026-07-02",
+      "durationWeeks": 4,
+      "status": "active",
+      "nutritionistId": "nut-1"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "rc-1",
+      "name": "Keto Herb Grilled Salmon",
+      "category": "Lunch/Dinner",
+      "prepTime": 10,
+      "cookTime": 15,
+      "servingSize": 1,
+      "ingredients": [
+        {
+          "name": "Salmon Fillet",
+          "quantity": 200,
+          "unit": "g"
+        },
+        {
+          "name": "Lemon Juice",
+          "quantity": 15,
+          "unit": "ml"
+        },
+        {
+          "name": "Olive Oil",
+          "quantity": 10,
+          "unit": "ml"
+        },
+        {
+          "name": "Fresh Asparagus",
+          "quantity": 100,
+          "unit": "g"
+        },
+        {
+          "name": "Garlic Powder",
+          "quantity": 2,
+          "unit": "g"
+        }
+      ],
+      "nutritionalValues": {
+        "calories": 380,
+        "protein": 34,
+        "carbs": 4,
+        "fat": 26,
+        "fiber": 2,
+        "sodium": 210
+      },
+      "instructions": [
+        "Preheat grill to medium-high heat.",
+        "Brush salmon with olive oil, lemon juice, and seasonings.",
+        "Grill salmon for 5-6 minutes on each side until cooked through.",
+        "Toss asparagus in light olive oil and grill for 4 minutes.",
+        "Plat and serve."
+      ]
+    },
+    {
+      "id": "rc-2",
+      "name": "Low-GI Quinoa Chicken Bowl",
+      "category": "Lunch/Dinner",
+      "prepTime": 15,
+      "cookTime": 20,
+      "servingSize": 1,
+      "ingredients": [
+        {
+          "name": "Chicken Breast",
+          "quantity": 150,
+          "unit": "g"
+        },
+        {
+          "name": "Quinoa",
+          "quantity": 60,
+          "unit": "g"
+        },
+        {
+          "name": "Broccoli",
+          "quantity": 80,
+          "unit": "g"
+        },
+        {
+          "name": "Cherry Tomatoes",
+          "quantity": 50,
+          "unit": "g"
+        },
+        {
+          "name": "Olive Oil Drizzle",
+          "quantity": 5,
+          "unit": "ml"
+        }
+      ],
+      "nutritionalValues": {
+        "calories": 420,
+        "protein": 38,
+        "carbs": 44,
+        "fat": 10,
+        "fiber": 6,
+        "sodium": 140
+      },
+      "instructions": [
+        "Rinse and boil quinoa in water (1:2 ratio) for 12-15 minutes.",
+        "Season chicken breast with herbs and grill till internal temp is 165F.",
+        "Steam broccoli for 4 minutes.",
+        "Combine cooked quinoa, chopped grilled chicken, steamed broccoli, and fresh tomatoes in a bowl.",
+        "Drizzle olive oil and pepper."
+      ]
+    },
+    {
+      "id": "rc-3",
+      "name": "Gluten-Free Almond Oats Porridge",
+      "category": "Breakfast",
+      "prepTime": 5,
+      "cookTime": 7,
+      "servingSize": 1,
+      "ingredients": [
+        {
+          "name": "Gluten-Free Oats",
+          "quantity": 50,
+          "unit": "g"
+        },
+        {
+          "name": "Almond Milk",
+          "quantity": 200,
+          "unit": "ml"
+        },
+        {
+          "name": "Chia Seeds",
+          "quantity": 5,
+          "unit": "g"
+        },
+        {
+          "name": "Himalayan Salt",
+          "quantity": 0.5,
+          "unit": "g"
+        },
+        {
+          "name": "Flaked Almonds",
+          "quantity": 10,
+          "unit": "g"
+        }
+      ],
+      "nutritionalValues": {
+        "calories": 290,
+        "protein": 9,
+        "carbs": 35,
+        "fat": 12,
+        "fiber": 7,
+        "sodium": 90
+      },
+      "instructions": [
+        "Combine gluten-free oats and almond milk in a small saucepan.",
+        "Bring to a gentle boil and simmer for 5 minutes, stirring continuously.",
+        "Stir in chia seeds.",
+        "Pour into a bowl and top with crunchy flaked almonds."
+      ]
+    }
+  ],
+  "mealPlans": [
+    {
+      "id": "mp-1",
+      "patientId": "pt-1",
+      "startDate": "2026-05-16",
+      "endDate": "2026-08-16",
+      "status": "active",
+      "days": [
+        {
+          "date": "2026-06-20",
+          "meals": {
+            "breakfast": "rc-3",
+            "lunch": "rc-1",
+            "dinner": "rc-2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mp-2",
+      "patientId": "pt-2",
+      "startDate": "2026-06-02",
+      "endDate": "2026-07-02",
+      "status": "active",
+      "days": [
+        {
+          "date": "2026-06-20",
+          "meals": {
+            "breakfast": "rc-3",
+            "lunch": "rc-2",
+            "dinner": "rc-1"
+          }
+        }
+      ]
+    }
+  ],
+  "kitchenBatches": [
+    {
+      "id": "k-1",
+      "date": "2026-06-20",
+      "recipeId": "rc-3",
+      "recipeName": "Gluten-Free Almond Oats Porridge",
+      "quantity": 2,
+      "mealType": "breakfast",
+      "assignedTo": "Sajid (Head Chef)",
+      "status": "completed",
+      "updatedAt": "2026-06-20T07:30:00"
+    },
+    {
+      "id": "k-2",
+      "date": "2026-06-20",
+      "recipeId": "rc-1",
+      "recipeName": "Keto Herb Grilled Salmon",
+      "quantity": 2,
+      "mealType": "lunch",
+      "assignedTo": "Aslam (Sous Chef)",
+      "status": "packed",
+      "updatedAt": "2026-06-20T11:15:00"
+    },
+    {
+      "id": "k-3",
+      "date": "2026-06-20",
+      "recipeId": "rc-2",
+      "recipeName": "Low-GI Quinoa Chicken Bowl",
+      "quantity": 2,
+      "mealType": "dinner",
+      "assignedTo": "Sajid (Head Chef)",
+      "status": "cooking",
+      "updatedAt": "2026-06-20T12:00:00"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "inv-1",
+      "name": "Salmon Fillet",
+      "category": "Meat & Poultry",
+      "currentStock": 8000,
+      "minThreshold": 3000,
+      "unit": "g"
+    },
+    {
+      "id": "inv-2",
+      "name": "Chicken Breast",
+      "category": "Meat & Poultry",
+      "currentStock": 15000,
+      "minThreshold": 5000,
+      "unit": "g"
+    },
+    {
+      "id": "inv-3",
+      "name": "Gluten-Free Oats",
+      "category": "Dry Goods",
+      "currentStock": 10000,
+      "minThreshold": 2000,
+      "unit": "g"
+    },
+    {
+      "id": "inv-4",
+      "name": "Almond Milk",
+      "category": "Dairy Products",
+      "currentStock": 25000,
+      "minThreshold": 5000,
+      "unit": "ml"
+    },
+    {
+      "id": "inv-5",
+      "name": "Quinoa",
+      "category": "Dry Goods",
+      "currentStock": 12000,
+      "minThreshold": 3000,
+      "unit": "g"
+    },
+    {
+      "id": "inv-6",
+      "name": "Broccoli",
+      "category": "Vegetables",
+      "currentStock": 6000,
+      "minThreshold": 2000,
+      "unit": "g"
+    },
+    {
+      "id": "inv-7",
+      "name": "Fresh Asparagus",
+      "category": "Vegetables",
+      "currentStock": 4000,
+      "minThreshold": 1500,
+      "unit": "g"
+    },
+    {
+      "id": "inv-8",
+      "name": "Packaging Paper Boxes",
+      "category": "Packaging Materials",
+      "currentStock": 500,
+      "minThreshold": 100,
+      "unit": "pcs"
+    }
+  ],
+  "purchaseOrders": [],
+  "routes": [
+    {
+      "id": "rt-1",
+      "name": "Route A: Clifton & DHA Phase 3 (Morning/Midday)",
+      "timingSlot": "morning",
+      "riderId": "rd-1",
+      "riderName": "Faisal Majeed",
+      "patientIds": [
+        "pt-1",
+        "pt-2"
+      ]
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "dl-1",
+      "date": "2026-06-20",
+      "patientId": "pt-1",
+      "patientName": "Ayesha Khan",
+      "patientAddress": "House 42, Sector Y, DHA Phase 3",
+      "patientPhone": "+92 300 1234567",
+      "routeId": "rt-1",
+      "routeName": "Route A: Clifton & DHA Phase 3",
+      "riderId": "rd-1",
+      "riderName": "Faisal Majeed",
+      "mealType": "Breakfast & Lunch Box",
+      "status": "delivered",
+      "proofOfDelivery": {
+        "method": "otp",
+        "otpCode": "8821",
+        "verifiedOtp": true,
+        "gpsLatitude": 31.47,
+        "gpsLongitude": 74.38,
+        "timestamp": "2026-06-20T08:45:00"
+      },
+      "scheduledSlot": "Breakfast"
+    },
+    {
+      "id": "dl-2",
+      "date": "2026-06-20",
+      "patientId": "pt-2",
+      "patientName": "Zain Ahmed",
+      "patientAddress": "Apartment 4B, Creek Vista, Phase 8, Clifton",
+      "patientPhone": "+92 333 4567890",
+      "routeId": "rt-1",
+      "routeName": "Route A: Clifton & DHA Phase 3",
+      "riderId": "rd-1",
+      "riderName": "Faisal Majeed",
+      "mealType": "Weight Control Lunch Box",
+      "status": "in_transit",
+      "proofOfDelivery": {
+        "method": "otp",
+        "otpCode": "4190",
+        "verifiedOtp": false,
+        "timestamp": ""
+      },
+      "scheduledSlot": "Lunch"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "ex-1",
+      "category": "Ingredients",
+      "amount": 4850,
+      "date": "2026-06-20",
+      "paymentMethod": "Cash",
+      "vendor": "Metro Cash & Carry",
+      "notes": "Weekly raw vegetables & chicken breast purchase"
+    },
+    {
+      "id": "ex-2",
+      "category": "Fuel",
+      "amount": 1540,
+      "date": "2026-06-20",
+      "paymentMethod": "Card",
+      "vendor": "PSO Clifton",
+      "notes": "Rider daily fuel claims"
+    },
+    {
+      "id": "ex-3",
+      "category": "Rent",
+      "amount": 80000,
+      "date": "2026-06-01",
+      "paymentMethod": "Bank Transfer",
+      "vendor": "Siddique Commercial Prop",
+      "notes": "Kitchen facility lease"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log-1781918319916",
+      "timestamp": "2026-06-20T01:18:39.916Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917895641",
+      "timestamp": "2026-06-20T01:11:35.641Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917886703",
+      "timestamp": "2026-06-20T01:11:26.703Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917853576",
+      "timestamp": "2026-06-20T01:10:53.576Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917841191",
+      "timestamp": "2026-06-20T01:10:41.191Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917830482",
+      "timestamp": "2026-06-20T01:10:30.482Z",
+      "userId": "usr-kitchen",
+      "userName": "Master Chef Sajid",
+      "userRole": "kitchen",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role kitchen"
+    },
+    {
+      "id": "log-1781917820213",
+      "timestamp": "2026-06-20T01:10:20.213Z",
+      "userId": "usr-dispatch",
+      "userName": "Logistics Lead",
+      "userRole": "dispatcher",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role dispatcher"
+    },
+    {
+      "id": "log-1781917805449",
+      "timestamp": "2026-06-20T01:10:05.449Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917778549",
+      "timestamp": "2026-06-20T01:09:38.549Z",
+      "userId": "usr-dispatch",
+      "userName": "Logistics Lead",
+      "userRole": "dispatcher",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role dispatcher"
+    },
+    {
+      "id": "log-1781917764933",
+      "timestamp": "2026-06-20T01:09:24.933Z",
+      "userId": "usr-kitchen",
+      "userName": "Master Chef Sajid",
+      "userRole": "kitchen",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role kitchen"
+    },
+    {
+      "id": "log-1781917751738",
+      "timestamp": "2026-06-20T01:09:11.738Z",
+      "userId": "usr-nut",
+      "userName": "Dr. Sarah (Nutritionist)",
+      "userRole": "nutritionist",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role nutritionist"
+    },
+    {
+      "id": "log-1781917718078",
+      "timestamp": "2026-06-20T01:08:38.078Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917695658",
+      "timestamp": "2026-06-20T01:08:15.658Z",
+      "userId": "usr-patient",
+      "userName": "Ayesha Khan (Patient)",
+      "userRole": "patient",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role patient"
+    },
+    {
+      "id": "log-1781917685402",
+      "timestamp": "2026-06-20T01:08:05.402Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917669190",
+      "timestamp": "2026-06-20T01:07:49.190Z",
+      "userId": "usr-kitchen",
+      "userName": "Master Chef Sajid",
+      "userRole": "kitchen",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role kitchen"
+    },
+    {
+      "id": "log-1781917651043",
+      "timestamp": "2026-06-20T01:07:31.043Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917631995",
+      "timestamp": "2026-06-20T01:07:11.995Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917613849",
+      "timestamp": "2026-06-20T01:06:53.849Z",
+      "userId": "usr-nut",
+      "userName": "Dr. Sarah (Nutritionist)",
+      "userRole": "nutritionist",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role nutritionist"
+    },
+    {
+      "id": "log-1781917601354",
+      "timestamp": "2026-06-20T01:06:41.354Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917569333",
+      "timestamp": "2026-06-20T01:06:09.333Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917428702",
+      "timestamp": "2026-06-20T01:03:48.702Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917403480",
+      "timestamp": "2026-06-20T01:03:23.480Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917324805",
+      "timestamp": "2026-06-20T01:02:04.805Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917320716",
+      "timestamp": "2026-06-20T01:02:00.716Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917294859",
+      "timestamp": "2026-06-20T01:01:34.859Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917070175",
+      "timestamp": "2026-06-20T00:57:50.175Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1781917067380",
+      "timestamp": "2026-06-20T00:57:47.380Z",
+      "userId": "usr-owner",
+      "userName": "Business Owner",
+      "userRole": "owner",
+      "action": "User Login",
+      "details": "Successfully logged inside console with role owner"
+    },
+    {
+      "id": "log-1",
+      "timestamp": "2026-06-20T09:00:00",
+      "userId": "usr-admin",
+      "userName": "Private System",
+      "userRole": "admin",
+      "action": "System Init",
+      "details": "Private Self-hosted DB successfully deployed."
+    }
+  ]
+}

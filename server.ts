@@ -724,6 +724,16 @@ async function initializeDatabase() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS assignments (
+        id VARCHAR(50) PRIMARY KEY,
+        patient_id VARCHAR(50) NOT NULL,
+        recipe_id VARCHAR(50) NOT NULL,
+        assigned_by VARCHAR(50) NOT NULL,
+        assigned_at VARCHAR(100) NOT NULL
+      );
+    `);
+
     await client.query('COMMIT');
 
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
